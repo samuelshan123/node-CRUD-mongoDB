@@ -1,8 +1,15 @@
 const express = require('express')
 const bodyParser = require('body-parser')
-const MongoClient = require('mongodb').MongoClient
+const mongodb = require('mongodb')
+const MongoClient = mongodb.MongoClient
+
 const app = express()
 const port =3000
+const cors =require('cors')
+
+app.use(cors({
+  origin:'*'
+}))
 
 const URL = 'mongodb://localhost:27017'
 
@@ -15,50 +22,63 @@ MongoClient.connect(URL, { useUnifiedTopology: true })
     app.use(bodyParser.urlencoded({ extended: true }))
     app.use(bodyParser.json())
 
-    app.get('/', (req, res) => {
-        userCollection.find().toArray()
-        .then(result => {
+    app.get('/getUsers', async (req, res) => {
+      await  userCollection.find().toArray((err,result)=>{
+          if(err) throw err
           res.send(result)
-        })
-        .catch(error=>console.error(error))
+   })
     })
 
-    app.post('/insert', (req, res) => {
-      userCollection.insertOne(req.body)
-        .then(result => {
-          res.send(result)
-        })
-        .catch(error => console.error(error))
+    app.post("/getUser", async (req,res)=>{
+      console.log(req.body);
+     await userCollection.findOne({_id:new mongodb.ObjectId(req.body.id)},(err,result)=>{
+            if(err) throw err
+            res.send(result)
+     })
+    })
+    // await userCollection.findOne({_id:req.body.id})
+    //   .then(result => {
+    //     res.send(result)
+    //   })
+    //   .catch(error=>console.error(error))
+    // })
+
+    app.post('/insert',async (req, res) => {
+    await  userCollection.insertOne(req.body,(err,result)=>{
+        if(err) throw err
+        res.send(result)
+ })
     })
 
-    app.put('/update', (req, res) => {
-      userCollection.findOneAndUpdate(
-       req.body.condition,
+    app.post('/update', async (req, res) => {
+      console.log(req.body);
+    await  userCollection.findOneAndUpdate(
+   {_id:new mongodb.ObjectId(req.body.id)},
         {
           $set: {
-            name: req.body.name,
-            age: req.body.age
+            first_name: req.body.first_name,
+            last_name: req.body.last_name,
+            profile: req.body.profile,
+
           }
         },
         {
           upsert: true
-        }
-      )
-        .then(result => res.send(result))
-        .catch(error => console.error(error))
+        },
+        (err,result)=>{
+          if(err) throw err
+          res.send(result)
+   })
     })
 
-    app.delete('/delete', (req, res) => {
-      userCollection.deleteOne(
-        { name: req.body.name }
-      )
-        .then(result => {
-          if (result.deletedCount === 0) {
-            return res.send('No user to delete')
-          }
-          res.send('Deleted successfully')
-        })
-        .catch(error => console.error(error))
+    app.post('/delete',async (req, res) => {
+      console.log(req.body);
+    await  userCollection.deleteOne(
+      {_id:new mongodb.ObjectId(req.body.id)},
+        (err,result)=>{
+          if(err) throw err
+          res.send(result)
+   })
     })
 
     app.listen(port, function () {
